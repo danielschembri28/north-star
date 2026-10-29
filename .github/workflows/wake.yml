@@ -1,0 +1,21 @@
+# Wakes the free Render service every 30 minutes so due review requests go out,
+# and Xero / Google stay in sync. Needs the repository secret NORTHSTAR_WAKE_URL:
+#   https://<your-app>.onrender.com/cron/run?key=<CRON_SECRET>
+# Delete this file once the app runs on a paid, always-on plan.
+name: Wake NorthStar
+on:
+  schedule:
+    - cron: '7,37 * * * *'
+  workflow_dispatch:
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call the wake-up address
+        env:
+          URL: ${{ secrets.NORTHSTAR_WAKE_URL }}
+        run: |
+          if [ -z "$URL" ]; then echo "NORTHSTAR_WAKE_URL secret is not set yet, skipping."; exit 0; fi
+          # The first call may wait ~1 minute while the free service wakes up.
+          curl --fail --silent --show-error --max-time 150 --retry 2 --retry-delay 20 "$URL"
