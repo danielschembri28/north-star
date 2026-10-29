@@ -1,0 +1,21 @@
+<%- include("../partials/head") %>
+<body>
+<div class="auth">
+<div class="auth-card">
+<a class="brand" href="/"><%- h.starMark(30, "#F2B630", "#FFFFFF") %><span>NorthStar</span></a>
+<h1>Reset your password</h1>
+<% if (sent) { %>
+<div class="banner success" role="status"><span class="txt">If an account exists for that email, we have sent a link to reset the password. It works for one hour.</span></div>
+<a class="btn secondary" href="/login">Back to sign in</a>
+<% } else { %>
+<p class="muted">Enter your email and we will send you a link to choose a new password.</p>
+<form method="post" action="/forgot" class="stack">
+<label class="field">Email<input name="email" type="email" autocomplete="email" required></label>
+<button class="btn lg" type="submit">Send reset link</button>
+</form>
+<a class="small" href="/login">Back to sign in</a>
+<% } %>
+</div>
+</div>
+</body>
+</html>

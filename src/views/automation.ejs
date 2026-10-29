@@ -1,0 +1,86 @@
+<%- include('partials/shell-top') %>
+<header class="page-head">
+  <div class="titles">
+    <h1 class="title">Review request automation</h1>
+    <p class="lede">Click any step to change it. Changes apply to new jobs from now on.</p>
+  </div>
+  <form method="post" action="/automation/toggle" class="inline-form"><%- include('partials/csrf') %>
+    <button type="submit" class="run-toggle" role="switch" aria-checked="<%= business.automation_running %>"<%= canEdit ? '' : ' disabled' %>><span class="track"></span><%= business.automation_running ? 'Running' : 'Paused' %></button>
+  </form>
+</header>
+
+<% if (!business.automation_running) { %>
+<div class="banner paused" role="status"><%- h.icon('pause', 22, 'currentColor', 2) %>
+  <span class="txt"><strong>Automation is <%= business.onboarding_done ? 'paused' : 'off' %>.</strong> No requests will be sent on their own.<% if (s.held) { %> <%= h.plural(s.held, 'request is', 'requests are') %> waiting and will be asked once you resume.<% } %><% if (business.paused_by) { %> Paused by <%= business.paused_by %> on <%= h.date(business.paused_at) %>.<% } %></span>
+  <form method="post" action="/automation/toggle" class="inline-form"><%- include('partials/csrf') %><button class="btn sm" type="submit"<%= canEdit ? '' : ' disabled' %>><%= business.onboarding_done ? 'Resume' : 'Turn on' %></button></form>
+</div>
+<% } %>
+
+<div class="cols" style="align-items:flex-start">
+  <section class="seq<%= business.automation_running ? '' : ' paused' %>" aria-label="Sequence">
+    <% nodes.forEach((n, i) => { %>
+      <% if (i) { %><div class="seq-line" aria-hidden="true"></div><% } %>
+      <a class="seq-node" href="/automation?step=<%= n.id %>" aria-current="<%= sel === n.id %>"<% if (n.off) { %> style="opacity:.6"<% } %>>
+        <span class="num" aria-hidden="true" style="background: <%= n.color %>; color: <%= n.fg %>"><%= i + 1 %></span>
+        <span class="txt"><span class="kind"><%= n.kind %></span><span class="t"><%= n.title %></span><span class="s"><%= n.sub %></span></span>
+        <span class="stat"><%= n.stat %></span>
+      </a>
+    <% }) %>
+    <div class="seq-line" aria-hidden="true"></div>
+    <div class="seq-done">Done. Customers are never asked twice.</div>
+  </section>
+
+  <aside class="side">
+    <section class="card">
+      <p class="eyebrow">Editing step <%= idx + 1 %></p>
+      <h2 class="h2"><%= nodes[idx].kind %>: <%= nodes[idx].title %></h2>
+      <form method="post" action="/automation" class="stack"><%- include('partials/csrf') %><input type="hidden" name="step" value="<%= sel %>">
+      <% if (sel === 'trigger') { %>
+        <label class="field">Start when
+          <select name="trigger_type"><option value="paid"<%= business.trigger_type === 'paid' ? ' selected' : '' %>>An invoice is marked paid</option><option value="complete"<%= business.trigger_type === 'complete' ? ' selected' : '' %>>A job is marked complete</option></select></label>
+        <p class="small muted">Jobs arrive from <a href="/integrations">your connected apps</a>, CSV imports, or when you press Send request on a customer. With Xero, “job complete” means the invoice is approved.</p>
+      <% } else if (sel === 'delay') { const opts = [[0,'Straight away'],[120,'2 hours'],[1440,'1 day'],[2880,'2 days'],[4320,'3 days'],[10080,'7 days']]; if (!opts.some(o => o[0] === business.delay_minutes)) opts.push([business.delay_minutes, h.delayLabel(business.delay_minutes)]); %>
+        <label class="field">Wait
+          <select name="delay_minutes"><% opts.forEach(([m, l]) => { %><option value="<%= m %>"<%= business.delay_minutes === m ? ' selected' : '' %>><%= l %></option><% }) %></select></label>
+        <p class="small muted">Respects quiet hours, <%= business.quiet_start %> to <%= business.quiet_end %><%= business.skip_sundays ? ', and no Sundays' : '' %>.</p>
+      <% } else if (sel === 'message') { const perms = ['whatsapp,sms,email','whatsapp,email,sms','sms,whatsapp,email','sms,email,whatsapp','email,whatsapp,sms','email,sms,whatsapp']; const nm = {whatsapp:'WhatsApp',sms:'SMS',email:'Email'}; %>
+        <p class="small muted" style="margin:0">Sent on the first channel each customer can receive, in this order:</p>
+        <label class="field">Order
+          <select name="channel_order"><% perms.forEach(p => { %><option value="<%= p %>"<%= business.channel_order === p ? ' selected' : '' %>><%= p.split(',').map(x => nm[x]).join(' → ') %></option><% }) %></select></label>
+        <fieldset class="stack" style="border:0;padding:0;margin:0;gap:10px"><legend class="field" style="margin-bottom:8px">Channels switched on</legend>
+        <% ['whatsapp','sms','email'].forEach(ch => { %>
+          <label class="check"><input type="checkbox" name="channel_<%= ch %>" value="1"<%= business['channel_' + ch] ? ' checked' : '' %>> <%= nm[ch] %><% if (!providers[ch]) { %> <span class="badge b-amber">Not set up on the server</span><% } %></label>
+        <% }) %>
+        </fieldset>
+        <a href="/messages" style="font-weight:700;font-size:14px">Edit message wording</a>
+      <% } else if (sel === 'wait') { %>
+        <label class="field">If no click after
+          <select name="followup_wait_days"><% [2,3,5,7,10,14].forEach(d => { %><option value="<%= d %>"<%= business.followup_wait_days === d ? ' selected' : '' %>><%= d %> days</option><% }) %></select></label>
+        <p class="small muted">Customers who opened the link or left a review are not reminded.</p>
+      <% } else { %>
+        <input type="hidden" name="followup_wait_days" value="<%= business.followup_wait_days %>">
+        <label class="switch">
+          <span class="lbl"><b>Send one reminder</b><span>One friendly reminder on the same channel. Skipped if the customer opened the link or opted out.</span></span>
+          <input type="checkbox" role="switch" class="sr-only" name="followup_enabled" value="1"<%= business.followup_enabled ? ' checked' : '' %>><span class="track"></span>
+        </label>
+        <a href="/messages?which=follow" style="font-weight:700;font-size:14px">Edit reminder wording</a>
+      <% } %>
+      <% if (canEdit) { %><button class="btn" type="submit">Save step</button><% } %>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2 class="h2">Always applied</h2>
+      <ul class="rules">
+        <li>No messages between <%= business.quiet_start %> and <%= business.quiet_end %> (<%= business.timezone %>)</li>
+        <% if (business.skip_sundays) { %><li>No messages on Sundays</li><% } %>
+        <li>At most <%= business.daily_limit %> requests a day</li>
+        <% if (business.repeat_guard_days > 0) { %><li>Each customer is asked at most once every <%= business.repeat_guard_days %> days</li><% } %>
+        <li>Anyone who replies STOP or unsubscribes is never contacted again</li>
+      </ul>
+      <a href="/settings#sending" style="font-weight:700;font-size:14px">Change sending rules</a>
+    </section>
+    <% if (s.scheduled) { %><p class="small muted"><%= h.plural(s.scheduled, 'message is', 'messages are') %> scheduled to go out. See them in <a href="/activity">Activity</a>.</p><% } %>
+  </aside>
+</div>
+<%- include('partials/shell-bottom') %>

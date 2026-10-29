@@ -1,0 +1,17 @@
+<%- include('../partials/shell-top', { narrow: true }) %>
+<header class="page-head"><div class="titles"><a href="/customers" class="small">← Customers</a><h1 class="title"><%= values.send ? 'Send a review request' : 'Add customer' %></h1><p class="lede">Add their details and, if the job is done, send the request straight away.</p></div></header>
+<% if (error) { %><div class="banner error" role="alert"><span class="txt"><%= error %></span></div><% } %>
+<form class="card" method="post" action="/customers"><%- include('../partials/csrf') %>
+  <label class="field">Name<input name="name" required autocomplete="off" value="<%= values.name || '' %>"></label>
+  <div class="form-grid">
+    <label class="field">Mobile number <span class="hint">For WhatsApp and SMS. Include the country code.</span><input name="phone" type="tel" inputmode="tel" placeholder="+356 7912 4410" value="<%= values.phone || '' %>"></label>
+    <label class="field">Email <span class="opt">Optional</span><input name="email" type="email" value="<%= values.email || '' %>"></label>
+  </div>
+  <div class="form-grid">
+    <label class="field">What did you do for them? <span class="opt">Optional</span><input name="service" placeholder="Boiler repair" value="<%= values.service || '' %>"></label>
+    <label class="field">Invoice or job number <span class="opt">Optional</span><input name="reference" placeholder="INV-1042" value="<%= values.reference || '' %>"></label>
+  </div>
+  <label class="check"><input type="checkbox" name="send" value="1"<%= values.send ? ' checked' : '' %>> Send a review request now (quiet hours still apply)</label>
+  <div class="row"><button class="btn" type="submit">Save customer</button><a class="btn secondary" href="/customers">Cancel</a></div>
+</form>
+<%- include('../partials/shell-bottom') %>

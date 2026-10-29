@@ -1,0 +1,19 @@
+<%- include('../partials/head') %>
+<body>
+<main class="public">
+<div class="public-card">
+<% if (business.logo_file_id) { %><img src="/files/<%= business.logo_file_id %>" alt="<%= business.name %>" width="72" height="72" style="width:72px;height:72px;border-radius:18px;object-fit:cover"><% } else { %><div class="logo-box"><%= h.initials(business.name) %></div><% } %>
+<h1>Thanks, <%= name %>! How did <%= business.name %> do?</h1>
+<% if (links.length) { %>
+<p class="muted">Your review takes under a minute and helps other people find a business they can trust.</p>
+<% links.forEach((l, i) => { %>
+<a class="btn <%= i === 0 ? '' : 'secondary' %>" href="/r/<%= code %>/go/<%= l.key %>"><%= l.label %></a>
+<% }) %>
+<% } else { %>
+<p class="muted"><%= business.name %> is still setting up its review page. Thank you for your time all the same.</p>
+<% } %>
+<p class="public-foot">Do not want messages like this? <a href="/u/<%= code %>">Unsubscribe</a></p>
+</div>
+</main>
+</body>
+</html>

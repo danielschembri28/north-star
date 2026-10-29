@@ -1,0 +1,17 @@
+<%- include('partials/shell-top') %>
+<header class="page-head"><div class="titles"><h1 class="title">Menu</h1><p class="lede"><%= business.name %> · <%= user.name %> (<%= roleLabel %>)</p></div></header>
+<% if (progress && progress.done < progress.total) { %>
+<a class="card tight" href="<%= progress.next.href %>" style="text-decoration:none;color:inherit">
+  <b>Setup <%= progress.done %> of <%= progress.total %> done</b>
+  <div class="bar"><span style="width: <%= progress.pct %>%; background: #F2B630"></span></div>
+  <span class="small muted"><%= progress.next.label %></span>
+</a>
+<% } %>
+<nav class="menu-list" aria-label="All sections">
+<% [['home','/dashboard','Dashboard'],['customers','/customers','Customers'],['automation','/automation','Automation'],['messages','/messages','Messages'],['activity','/activity','Activity'],['reviews','/reviews','Reviews'],['integrations','/integrations','Integrations'],['settings','/settings','Settings']].forEach(([key, href, label]) => { %>
+  <a href="<%= href %>"><%- h.icon(key, 22) %><%= label %></a>
+<% }) %>
+  <a href="/businesses"><%- h.icon('customers', 22) %>Switch or add a business</a>
+</nav>
+<form method="post" action="/logout"><%- include('partials/csrf') %><button class="btn secondary" type="submit" style="width:100%"><%- h.icon('logout', 18) %>Sign out</button></form>
+<%- include('partials/shell-bottom') %>

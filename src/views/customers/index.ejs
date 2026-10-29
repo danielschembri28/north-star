@@ -1,0 +1,73 @@
+<%- include('../partials/shell-top') %>
+<header class="page-head">
+  <div class="titles">
+    <h1 class="title">Customers</h1>
+    <p class="lede"><%= h.plural(total, 'customer') %><% if (xero && xero.last_sync_at) { %> · synced from Xero <%= h.ago(xero.last_sync_at).toLowerCase() %><% } %></p>
+  </div>
+  <div class="row">
+    <a class="btn secondary" href="/customers.csv"><%- h.icon('download', 18) %>Export</a>
+    <% if (canEdit) { %>
+    <a class="btn secondary" href="/customers/import">Import CSV</a>
+    <a class="btn" href="/customers/new">Add customer</a>
+    <% } %>
+  </div>
+</header>
+
+<form class="row" method="get" action="/customers" role="search">
+  <% if (f.status !== 'All') { %><input type="hidden" name="status" value="<%= f.status %>"><% } %>
+  <label class="search"><%- h.icon('search', 18, '#4A5568', 2) %><span class="sr-only">Search customers</span>
+    <input type="search" name="q" value="<%= f.q %>" placeholder="Search by name, phone or email"></label>
+  <label class="inline-select">Source
+    <select name="source" data-autosubmit><% sources.forEach(s => { %><option<%= f.source === s ? ' selected' : '' %>><%= s === 'All' ? 'All sources' : s %></option><% }) %></select></label>
+  <button class="btn secondary" type="submit">Search</button>
+</form>
+
+<div class="chips" role="group" aria-label="Filter by status">
+<% statuses.forEach(s => { %>
+  <a class="chip" aria-pressed="<%= f.status === s %>" href="<%= h.qs('/customers', { q: f.q, source: f.source, status: s }) %>"><%= s %> <span class="n"><%= counts[s] %></span></a>
+<% }) %>
+</div>
+
+<% if (total === 0) { %>
+<div class="empty">
+  <div class="ic"><%- h.icon('addUser', 30) %></div>
+  <h2>No customers here yet</h2>
+  <p>Import them from your connected app or upload a spreadsheet. It takes about a minute.</p>
+  <% if (canEdit) { %><div class="row" style="justify-content:center"><a class="btn" href="/integrations">Connect an app</a><a class="btn secondary" href="/customers/import">Upload CSV</a><a class="btn secondary" href="/customers/new">Add one by hand</a></div><% } %>
+</div>
+<% } else { %>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th scope="col">Customer</th><th scope="col">Contact</th><th scope="col">Source</th><th scope="col">Last job</th><th scope="col">Request</th><th scope="col" style="text-align:right"><span class="sr-only">Actions</span></th></tr></thead>
+  <tbody>
+  <% rows.forEach(c => { const st = c.req_status; const cant = st === 'Opted out' || st === 'Reviewed' || st === 'Scheduled'; %>
+  <tr>
+    <td><a class="who" href="/customers/<%= c.id %>"><span class="av md" aria-hidden="true"><%= h.initials(c.name) %></span><%= c.name %></a></td>
+    <td><span class="tabular"><%= c.phone ? h.formatPhone(c.phone) : 'No phone' %></span><span class="sub"><%= c.email || 'No email' %></span></td>
+    <td><%= SOURCE_LABEL[c.source] || c.source %></td>
+    <td><% if (c.job_service || c.job_reference) { %><%= [c.job_service, c.job_reference].filter(Boolean).join(' · ') %><span class="sub"><%= h.date(c.job_date) %></span><% } else { %><span class="muted">–</span><% } %></td>
+    <td><span class="badge <%= h.badge(st) %>"><%= st %></span></td>
+    <td style="text-align:right">
+      <% if (cant || !canEdit) { %>
+        <span class="btn ghost sm" aria-disabled="true"><%= st === 'Scheduled' ? 'Queued' : st %></span>
+      <% } else { %>
+        <form method="post" action="/customers/<%= c.id %>/send" class="inline-form"><%- include('../partials/csrf') %><input type="hidden" name="back" value="list">
+          <button class="btn sm <%= st === 'Not sent' ? '' : 'secondary' %>" type="submit" <% if (st !== 'Not sent') { %>data-confirm="Send <%= c.name %> another review request?"<% } %>><%= st === 'Not sent' ? 'Send request' : st === 'Failed' ? 'Try again' : 'Resend' %></button>
+        </form>
+      <% } %>
+    </td>
+  </tr>
+  <% }) %>
+  </tbody>
+</table>
+<% if (!rows.length) { %><p class="empty-row">No customers match. Try a different name or clear the filter.</p><% } %>
+</div>
+<div class="pager">
+  <span>Showing <%= rows.length ? ((f.page - 1) * 25 + 1) + '–' + ((f.page - 1) * 25 + rows.length) : '0' %> of <%= filteredTotal %></span>
+  <div class="row" style="gap:8px">
+    <% if (f.page > 1) { %><a class="btn secondary sm" href="<%= h.qs('/customers', { q: f.q, source: f.source, status: f.status, page: f.page - 1 }) %>">Previous</a><% } else { %><span class="btn secondary sm" aria-disabled="true">Previous</span><% } %>
+    <% if (f.page < pages) { %><a class="btn secondary sm" href="<%= h.qs('/customers', { q: f.q, source: f.source, status: f.status, page: f.page + 1 }) %>">Next</a><% } else { %><span class="btn secondary sm" aria-disabled="true">Next</span><% } %>
+  </div>
+</div>
+<% } %>
+<%- include('../partials/shell-bottom') %>

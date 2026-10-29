@@ -1,0 +1,123 @@
+<%- include('partials/shell-top') %>
+<header class="page-head">
+  <div class="titles">
+    <p class="eyebrow"><%= business.name %></p>
+    <h1 class="title"><%= h.greeting() %>, <%= h.firstName(user.name) %></h1>
+    <p class="lede"><%= business.automation_running ? 'Your review requests are running in the background. Here is how things are going.' : 'Automation is off, so no requests are going out on their own yet.' %></p>
+  </div>
+  <div class="row">
+    <a class="pill-status <%= business.automation_running ? 'on' : 'off' %>" href="/automation"><span class="dot"></span><%= business.automation_running ? 'Automation running' : 'Automation paused' %></a>
+    <div class="seg" role="group" aria-label="Date range">
+      <% [7, 30, 90].forEach(d => { %><a href="/dashboard?range=<%= d %>" aria-pressed="<%= range === d %>"><%= d %> days</a><% }) %>
+    </div>
+    <a class="btn" href="/customers/new?send=1"><%- h.icon('send', 18, '#F2B630', 2) %>Send a request</a>
+  </div>
+</header>
+
+<% if (integrationError) { %>
+<div class="banner error" role="alert"><%- h.icon('alert', 22, 'currentColor', 2) %><span class="txt"><strong><%= integrationError.provider === 'xero' ? 'Xero' : 'Google' %> stopped syncing on <%= h.date(integrationError.error_at) %>.</strong> <%= integrationError.error_message %></span><a class="btn solid-danger sm" href="/integrations/<%= integrationError.provider %>/connect">Reconnect</a></div>
+<% } %>
+<% if (!business.automation_running && business.onboarding_done) { %>
+<div class="banner paused" role="status"><%- h.icon('pause', 22, 'currentColor', 2) %><span class="txt"><strong>Automation is paused.</strong> No requests will be sent.<% if (pending) { %> <%= h.plural(pending, 'finished job is', 'finished jobs are') %> waiting and will be asked once you resume.<% } %></span>
+<form method="post" action="/automation/toggle" class="inline-form"><%- include('partials/csrf') %><input type="hidden" name="to" value="/dashboard"><button class="btn sm" type="submit"<%= canEdit ? '' : ' disabled' %>>Resume</button></form></div>
+<% } %>
+
+<section aria-label="Key numbers" class="kpis">
+<% stats.kpis.forEach(k => { %>
+  <div class="kpi"><p class="label"><%= k.label %></p><p class="value"><%= k.value %><small><%= k.suffix %></small></p><p class="delta <%= k.cls %>"><%= k.text %></p></div>
+<% }) %>
+</section>
+
+<div class="cols">
+  <section class="card c2">
+    <div class="spread" style="align-items: baseline">
+      <h2 class="h2">Average rating</h2>
+      <p class="small muted"><% if (chart) { %>Weekly, last 12 weeks · <%= chart.lastAvg >= chart.first ? 'up' : 'down' %> from <%= chart.first.toFixed(1) %> to <%= chart.lastAvg.toFixed(1) %><% } else { %>Last 12 weeks<% } %></p>
+    </div>
+    <% if (chart) { %>
+    <svg viewBox="0 0 600 240" width="100%" role="img" aria-label="Average rating moved from <%= chart.first.toFixed(1) %> to <%= chart.lastAvg.toFixed(1) %> over 12 weeks" style="display:block">
+      <g stroke="#E3E6EE" stroke-width="1"><% chart.labels.forEach(l => { %><line x1="40" y1="<%= l.y %>" x2="590" y2="<%= l.y %>"></line><% }) %></g>
+      <g font-family="Manrope, sans-serif" font-size="12" fill="#5B6474">
+        <% chart.labels.forEach(l => { %><text x="30" y="<%= l.y + 4 %>" text-anchor="end"><%= l.v %></text><% }) %>
+        <text x="40" y="226"><%= chartLabels[0] %></text><text x="285" y="226" text-anchor="middle"><%= chartLabels[1] %></text><text x="579" y="226" text-anchor="end"><%= chartLabels[2] %></text>
+      </g>
+      <path d="<%= chart.area %>" fill="#1F3A8A" fill-opacity="0.07"></path>
+      <path d="<%= chart.line %>" fill="none" stroke="#1F3A8A" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"></path>
+      <circle cx="<%= chart.last[0] %>" cy="<%= chart.last[1] %>" r="7" fill="#F2B630" stroke="#FFFFFF" stroke-width="3"></circle>
+      <text x="<%= chart.last[0] - 13 %>" y="<%= Math.max(16, chart.last[1] - 16) %>" font-family="Manrope, sans-serif" font-size="13" font-weight="800" fill="#101828" text-anchor="end"><%= chart.lastValue %></text>
+    </svg>
+    <% } else { %>
+    <div class="empty" style="border:0;padding:24px 0">
+      <%- h.starMark(56, 'none', null).replace('fill="none"', 'fill="none" stroke="#C98A00" stroke-width="1.2"') %>
+      <h2>Your rating trend starts here</h2>
+      <p>Once reviews arrive across two or more weeks, you will see how your average rating moves.</p>
+    </div>
+    <% } %>
+  </section>
+
+  <section class="card c1" style="gap:18px">
+    <h2 class="h2">From request to review</h2>
+    <div class="funnel-row"><div class="top"><span>Requests sent</span><b><%= stats.funnel.sent %></b></div><div class="bar thick full"></div></div>
+    <div class="funnel-row"><div class="top"><span>Opened the link</span><b><%= stats.funnel.clicked %> <span class="muted" style="font-weight:600">· <%= stats.funnel.clickRate %>%</span></b></div><div class="bar thick"><span style="width: <%= stats.funnel.clickRate %>%; background: #5677D1"></span></div></div>
+    <div class="funnel-row"><div class="top"><span>Left a review</span><b><%= stats.funnel.reviewed %> <span class="muted" style="font-weight:600">· <%= stats.funnel.responseRate %>%</span></b></div><div class="bar thick"><span style="width: <%= stats.funnel.responseRate %>%; background: #F2B630"></span></div></div>
+    <% if (stats.funnel.clicked) { %>
+    <p class="note"><%= Math.round(stats.funnel.conv / 10) %> in 10 customers who open the link go on to leave a review.</p>
+    <% } else { %>
+    <p class="note">Numbers fill in as requests go out. Most reviews arrive within two days of the request.</p>
+    <% } %>
+  </section>
+</div>
+
+<div class="cols">
+  <section class="card c1" style="gap:18px">
+    <h2 class="h2">By channel</h2>
+    <% stats.channels.forEach(c => { %>
+    <div class="stack" style="gap:8px">
+      <div class="spread" style="align-items: baseline; gap: 8px"><span style="font-size:15px;font-weight:700"><%= c.name %></span><span class="small muted tabular"><%= c.sent %> sent · <strong style="color:#101828"><%= h.plural(c.reviews, 'review') %></strong></span></div>
+      <div class="row" style="gap:10px;flex-wrap:nowrap"><div class="bar grow"><span style="width: <%= c.rate %>%"></span></div><span class="small tabular" style="width:72px;text-align:right;font-weight:700"><%= c.rate %>% open</span></div>
+    </div>
+    <% }) %>
+  </section>
+
+  <section class="card c2" style="gap:4px">
+    <div class="spread" style="align-items: baseline; margin-bottom: 8px"><h2 class="h2">Recent reviews</h2><a href="/reviews" style="font-size:14px;font-weight:700">See all reviews</a></div>
+    <% if (!stats.recent.length) { %>
+    <div class="empty" style="border:0;padding:24px 0">
+      <%- h.starMark(56, 'none', null).replace('fill="none"', 'fill="none" stroke="#C98A00" stroke-width="1.2"') %>
+      <h2><%= anySent ? 'Your first review is on its way' : 'No reviews yet' %></h2>
+      <p><%= anySent ? h.plural(stats.funnel.sent || anySent, 'request is', 'requests are') + ' out. Most reviews arrive within two days of the request.' : 'Send your first request and reviews will show up here.' %></p>
+      <a href="<%= anySent ? '/activity' : '/customers' %>"><%= anySent ? 'See what has been sent' : 'Go to customers' %></a>
+    </div>
+    <% } %>
+    <% stats.recent.forEach(rv => { const nm = rv.customer_name || rv.reviewer_name || 'Customer'; %>
+    <article class="review-item">
+      <div class="av" aria-hidden="true"><%= h.initials(nm) %></div>
+      <div class="body">
+        <div class="meta"><span style="font-weight:700;font-size:15px"><%= nm %></span><span class="stars" aria-label="<%= rv.rating %> out of 5 stars"><%= h.stars(rv.rating) %></span><span class="tag"><%= h.platform(rv.platform) %></span><span class="when"><%= h.ago(rv.reviewed_at) %></span></div>
+        <% if (rv.text) { %><p><%= rv.text %></p><% } %>
+      </div>
+    </article>
+    <% }) %>
+  </section>
+</div>
+
+<% if (firstReview) { const nm = firstReview.customer_name || firstReview.reviewer_name || 'A customer'; %>
+<dialog class="celebrate" open data-modal aria-labelledby="cel-title">
+  <div class="inner">
+    <div aria-hidden="true" style="position:relative;width:96px;height:80px">
+      <span style="position:absolute;left:12px;top:4px"><%- h.starMark(72, '#F2B630', null) %></span>
+      <span style="position:absolute;right:0;top:0"><%- h.starMark(18, '#1F3A8A', null) %></span>
+      <span style="position:absolute;left:0;bottom:0"><%- h.starMark(14, '#1F3A8A', null) %></span>
+    </div>
+    <h2 id="cel-title">Your first review is in!</h2>
+    <p><%= nm %> gave you <span class="stars" aria-label="<%= firstReview.rating %> out of 5 stars"><%= h.stars(firstReview.rating) %></span> on <%= h.platform(firstReview.platform) %></p>
+    <% if (firstReview.text) { %><blockquote><%= firstReview.text %></blockquote><% } %>
+    <p class="muted">That is the hard part done. NorthStar will keep them coming.</p>
+    <form method="post" action="/dashboard/celebrated" class="row" style="justify-content:center"><%- include('partials/csrf') %>
+      <button class="btn secondary" type="submit" name="to" value="share">See your reviews</button>
+      <button class="btn" type="submit" name="to" value="dashboard">Back to dashboard</button>
+    </form>
+  </div>
+</dialog>
+<% } %>
+<%- include('partials/shell-bottom') %>

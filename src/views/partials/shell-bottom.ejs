@@ -1,0 +1,10 @@
+</div>
+</main>
+<nav class="tabbar" aria-label="Main">
+<% [['home','/dashboard','Home'],['customers','/customers','Customers'],['reviews','/reviews','Reviews'],['more','/menu','More']].forEach(([key, href, label]) => { %>
+  <a href="<%= href %>"<% if (locals.active === key || (key === 'more' && !['home','customers','reviews'].includes(locals.active))) { %> aria-current="page"<% } %>><%- h.icon(key === 'more' ? 'menu' : key, 22) %><%= label %></a>
+<% }) %>
+</nav>
+</div>
+</body>
+</html>

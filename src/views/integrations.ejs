@@ -1,0 +1,60 @@
+<%- include('partials/shell-top') %>
+<header class="page-head">
+  <div class="titles">
+    <h1 class="title">Integrations</h1>
+    <p class="lede">Connect the tools you already use. NorthStar listens for finished jobs and paid invoices.</p>
+  </div>
+  <% if (canEdit) { %><a class="btn secondary" href="/customers/import"><%- h.icon('upload', 18) %>Upload a CSV instead</a><% } %>
+</header>
+
+<% if (errorInteg) { const nm = errorInteg.provider === 'xero' ? 'Xero' : 'Google'; %>
+<div class="banner error" role="alert"><%- h.icon('alert', 22, 'currentColor', 2) %>
+  <span class="txt"><strong><%= nm %> stopped syncing on <%= h.date(errorInteg.error_at) %>.</strong> <%= errorInteg.error_message %> Reconnecting takes about a minute.</span>
+  <% if (canEdit) { %><a class="btn solid-danger sm" href="/integrations/<%= errorInteg.provider %>/connect">Reconnect <%= nm %></a><% } %>
+</div>
+<% } %>
+
+<div class="chips" role="group" aria-label="Filter by type">
+<% ['All','Accounting','Booking','CRM','Reviews'].forEach(f => { %><a class="chip" aria-pressed="<%= filter === f %>" href="<%= h.qs('/integrations', { filter: f }) %>"><%= f %></a><% }) %>
+</div>
+
+<div class="apps">
+<% apps.forEach(a => { const badge = { Connected: 'b-green', Syncing: 'b-blue', Error: 'b-red', 'Not connected': 'b-gray', 'Via Zapier': 'b-gray' }[a.status]; %>
+  <article class="app-card<%= a.status === 'Error' ? ' err' : '' %>">
+    <div class="head">
+      <div class="tile" aria-hidden="true"><%= a.name[0] %></div>
+      <div><h2><%= a.name %></h2><span class="kind"><%= a.kind %></span></div>
+      <span class="badge <%= badge %>"><%= a.status %></span>
+    </div>
+    <p class="detail"><%= a.detail %></p>
+    <% if (a.key === 'xero' && a.integ && a.integ.status === 'syncing') { %>
+      <div class="stack" style="gap:6px"><div class="bar"><span style="width: <%= a.integ.progress_total ? Math.round(a.integ.progress_done / a.integ.progress_total * 100) : 40 %>%"></span></div>
+      <span class="small muted"><%= a.integ.progress_done || 0 %><%= a.integ.progress_total ? ' of ' + a.integ.progress_total : '' %> customers imported</span></div>
+    <% } %>
+    <div class="actions">
+    <% if (!canEdit) { %>
+      <span class="small muted">Ask the owner or a manager to change this.</span>
+    <% } else if (a.key === 'xero' || a.key === 'google') { %>
+      <% if (!a.ready) { %>
+        <span class="small muted">Needs server setup: add your <%= a.key === 'xero' ? 'Xero' : 'Google' %> app keys. See the README.</span>
+      <% } else if (a.status === 'Not connected') { %>
+        <a class="btn sm" href="/integrations/<%= a.key %>/connect">Connect</a>
+      <% } else if (a.status === 'Error') { %>
+        <a class="btn solid-danger sm" href="/integrations/<%= a.key %>/connect">Reconnect</a>
+        <form method="post" action="/integrations/<%= a.key %>/disconnect" class="inline-form"><%- include('partials/csrf') %><button class="btn ghost sm" type="submit">Disconnect</button></form>
+      <% } else { %>
+        <form method="post" action="/integrations/<%= a.key %>/sync" class="inline-form"><%- include('partials/csrf') %><button class="btn secondary sm" type="submit">Sync now</button></form>
+        <form method="post" action="/integrations/<%= a.key %>/disconnect" class="inline-form"><%- include('partials/csrf') %><button class="btn ghost sm" type="submit" data-confirm="Disconnect <%= a.name %>?">Disconnect</button></form>
+      <% } %>
+    <% } else if (a.key === 'webhook') { %>
+      <a class="btn sm<%= a.status === 'Connected' ? ' secondary' : '' %>" href="/integrations/webhook"><%= a.status === 'Connected' ? 'View setup' : 'Connect' %></a>
+    <% } else { %>
+      <a class="btn secondary sm" href="/integrations/webhook?app=<%= encodeURIComponent(a.name) %>">Connect with Zapier</a>
+    <% } %>
+    </div>
+  </article>
+<% }) %>
+</div>
+
+<p class="small muted">Do not see your app? <%- supportEmail ? `<a href="mailto:${supportEmail}?subject=Integration%20request">Tell us which one</a>` : 'Most apps can send finished jobs through <a href="/integrations/webhook">Zapier or Make</a>' %> and we will let you know when it is ready.</p>
+<%- include('partials/shell-bottom') %>

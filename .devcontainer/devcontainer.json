@@ -1,0 +1,11 @@
+{
+  "name": "NorthStar",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "forwardPorts": [3000],
+  "portsAttributes": { "3000": { "label": "NorthStar", "onAutoForward": "openBrowser" } },
+  "postCreateCommand": "npm install && npm run seed:demo",
+  "postAttachCommand": "npm start",
+  "customizations": { "codespaces": { "openFiles": ["README.md"] } }
+}

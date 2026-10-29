@@ -1,0 +1,19 @@
+<%- include("../partials/head") %>
+<body>
+<div class="auth">
+<div class="auth-card">
+<a class="brand" href="/"><%- h.starMark(30, "#F2B630", "#FFFFFF") %><span>NorthStar</span></a>
+<h1>Your businesses</h1>
+<div class="menu-list">
+<% list.forEach(b => { %>
+<form method="post" action="/businesses/<%= b.id %>/switch" style="margin:0"><%- include('../partials/csrf') %>
+<button type="submit"><span class="av md"><%= h.initials(b.name) %></span><span class="grow"><%= b.name %></span><% if (business && b.id === business.id) { %><span class="badge b-green">Current</span><% } %></button>
+</form>
+<% }) %>
+</div>
+<a class="btn secondary" href="/businesses/new">Add another business</a>
+<a class="small" href="/dashboard">Back to dashboard</a>
+</div>
+</div>
+</body>
+</html>

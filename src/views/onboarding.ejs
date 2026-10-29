@@ -1,0 +1,136 @@
+<%- include('partials/head') %>
+<body>
+<div class="ob">
+  <header class="ob-head">
+    <a class="brand" href="/dashboard"><%- h.starMark(26, '#F2B630', '#FFFFFF') %><span style="font-size:18px;font-weight:800">NorthStar</span></a>
+    <div class="row">
+      <span class="small muted" style="font-weight:700"><%= step === 8 ? 'Last step' : 'About ' + minutesLeft + ' min left' %></span>
+      <form method="post" action="/onboarding-skip" class="inline-form"><%- include('partials/csrf') %><button class="linkish" type="submit">Save and finish later</button></form>
+    </div>
+  </header>
+  <div class="ob-body">
+    <div class="ob-steps">
+      <div class="ob-progress"><span style="width: <%= Math.round(step / 8 * 100) %>%"></span></div>
+      <ol aria-label="Setup steps">
+      <% steps.forEach(([label], i) => { const n = i + 1; const done = n < business.onboarding_step || business.onboarding_done; const reachable = n <= business.onboarding_step || business.onboarding_done; %>
+        <li><a href="<%= reachable ? '/onboarding?step=' + n : '#' %>" class="<%= done && n !== step ? 'done' : '' %>"<% if (n === step) { %> aria-current="step"<% } %><% if (!reachable) { %> aria-disabled="true" tabindex="-1"<% } %>><span class="mk"><%= done && n !== step ? '✓' : n %></span><%= label %></a></li>
+      <% }) %>
+      </ol>
+    </div>
+
+    <section class="ob-panel">
+      <%- include('partials/flash') %>
+      <div class="stack" style="gap:8px">
+        <p class="step-no">Step <%= step %> of 8</p>
+        <h1><%= steps[step - 1][1] %></h1>
+        <p class="lede"><%= steps[step - 1][2] %></p>
+      </div>
+
+      <form method="post" action="/onboarding/<%= step %><%= step === 1 ? '?_csrf=' + encodeURIComponent(csrf) : '' %>" class="stack" style="gap:24px"<%= step === 1 ? ' enctype=multipart/form-data' : '' %>>
+        <%- include('partials/csrf') %>
+
+        <% if (step === 1) { %>
+          <div class="row" style="align-items:flex-end">
+            <label class="logo-box" style="cursor:pointer;flex-direction:column;gap:4px;font-size:12px;<%= business.logo_file_id ? '' : 'background:#F4F5F9;color:#4A5568;border:1px dashed #C3C9D6' %>">
+              <% if (business.logo_file_id) { %><img src="/files/<%= business.logo_file_id %>" alt="Your logo"><% } else { %><%- h.icon('upload', 22) %>Add logo<% } %>
+              <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif" class="sr-only">
+            </label>
+            <label class="field" style="flex:1 1 260px">Business name<input name="name" value="<%= business.name %>" required></label>
+          </div>
+          <label class="field">Google review link<input type="url" name="google_review_url" value="<%= business.google_review_url %>" placeholder="Paste the link from your Google Business Profile"></label>
+          <label class="field">Facebook review link <span class="opt">Optional</span><input type="url" name="facebook_review_url" value="<%= business.facebook_review_url %>" placeholder="facebook.com/yourpage/reviews"></label>
+          <details class="disclose"><summary class="linkish">Not sure where to find these?</summary>
+            <ol class="rules" style="margin-top:10px">
+              <li><strong>Google:</strong> search for your business on Google while signed in, choose <em>Ask for reviews</em> (or <em>Get more reviews</em>), and copy the link it shows.</li>
+              <li><strong>Facebook:</strong> open your Page, go to <em>Reviews</em>, and copy the address from your browser.</li>
+            </ol>
+          </details>
+        <% } %>
+
+        <% if (step === 2) { const opts = [['xero','X','Xero','Accounting · paid invoices start requests'],['webhook','Z','Zapier, Make or another app','QuickBooks, Fresha, Square, HubSpot, Jobber…'],['csv','C','CSV uploads','Upload customer lists from a spreadsheet'],['manual','M','I will send them myself','Press Send request after each job']]; const cur = xero ? 'xero' : business.trigger_source || 'xero'; %>
+          <div class="choice-grid" role="radiogroup" aria-label="App">
+          <% opts.forEach(([id, l, name, kind]) => { %>
+            <label class="choice"><input type="radio" name="app" value="<%= id %>"<%= cur === id ? ' checked' : '' %>><span class="tile" aria-hidden="true"><%= l %></span><span class="ct"><b><%= name %><% if (id === 'xero' && xero) { %> <span class="badge b-green">Connected</span><% } %></b><span><%= kind %></span></span></label>
+          <% }) %>
+          </div>
+          <% if (!xeroReady) { %><p class="small muted">Xero needs to be set up on the server first (see the README). You can still pick it now and connect later.</p><% } %>
+        <% } %>
+
+        <% if (step === 3) { %>
+          <% if (xero) { %>
+            <div class="choice" style="cursor:default"><span class="ct"><b>Import from Xero</b><span><%= customers.n %> customers found<%= customers.n ? ', with phone numbers for ' + customers.phones : '' %><%= xero.status === 'syncing' ? ' so far — still importing' : '' %></span></span><span class="badge b-green" style="margin-left:auto">Connected</span></div>
+          <% } else if (customers.n) { %>
+            <div class="banner success"><span class="txt"><strong><%= h.plural(customers.n, 'customer') %></strong> already in NorthStar.</span></div>
+          <% } %>
+          <div class="choice-grid">
+            <a class="choice" href="/customers/import" style="text-decoration:none;color:inherit"><span class="tile" aria-hidden="true"><%- h.icon('upload', 20) %></span><span class="ct"><b>Upload a CSV file</b><span>Name, phone and email columns. We match them for you.</span></span></a>
+            <a class="choice" href="/customers/new" style="text-decoration:none;color:inherit"><span class="tile" aria-hidden="true"><%- h.icon('addUser', 20) %></span><span class="ct"><b>Add customers by hand</b><span>Good for trying it out with yourself first</span></span></a>
+          </div>
+          <p class="small muted">Past customers are imported but will not be messaged unless you choose to. Only new jobs trigger requests. <a href="/customers/import-template.csv">Download a CSV template</a>.</p>
+        <% } %>
+
+        <% if (step === 4) { %>
+          <div class="stack" role="radiogroup" aria-label="Trigger" style="gap:12px">
+          <% [['paid','Invoice is marked paid','Best for trades and repair shops that invoice after the job.'],['complete','Job is marked complete','Best for clinics, salons and anyone using a booking app.']].forEach(([id, name, desc]) => { %>
+            <label class="choice" style="align-items:flex-start"><input type="radio" name="trigger" value="<%= id %>"<%= business.trigger_type === id ? ' checked' : '' %>><span class="radio" style="margin-top:2px"></span><span class="ct"><b><%= name %></b><span><%= desc %></span></span></label>
+          <% }) %>
+          </div>
+        <% } %>
+
+        <% if (step === 5) { const isCustom = ![120, 1440, 4320].includes(business.delay_minutes); %>
+          <div class="pills" role="radiogroup" aria-label="Delay">
+          <% [[120,'2 hours'],[1440,'1 day'],[4320,'3 days']].forEach(([m, l]) => { %>
+            <label class="pill-choice"><input type="radio" name="delay" value="<%= m %>"<%= business.delay_minutes === m ? ' checked' : '' %>><span><%= l %></span></label>
+          <% }) %>
+            <label class="pill-choice"><input type="radio" name="delay" value="custom"<%= isCustom ? ' checked' : '' %>><span>Custom</span></label>
+          </div>
+          <label class="field" style="max-width:260px">Custom wait, in hours <span class="hint">Used when Custom is picked</span><input type="number" name="custom_hours" min="0" max="720" step="0.5" value="<%= isCustom ? business.delay_minutes / 60 : 24 %>"></label>
+          <p class="preview-msg">Example: invoice paid <strong>Monday at 10:00</strong> → request sent <strong><%= delayExample %></strong>. Messages wait until morning if this falls in quiet hours.</p>
+        <% } %>
+
+        <% if (step === 6) { %>
+          <div class="pills">
+          <% [['whatsapp','WhatsApp'],['sms','SMS'],['email','Email']].forEach(([id, name]) => { %>
+            <label class="choice" style="min-height:52px;padding:0 18px"><input type="checkbox" name="<%= id %>" value="1"<%= business['channel_' + id] ? ' checked' : '' %>><span class="box"></span><b><%= name %></b></label>
+          <% }) %>
+          </div>
+          <div class="stack" style="gap:8px">
+            <span class="small" style="font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#4A5568">Your first message</span>
+            <div class="preview-msg"><%- firstMsg.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])).replace(/\{(first_name|business_name|service)\}/g, '<span class="tok">{$1}</span>') %></div>
+            <a href="/messages" style="font-weight:700;font-size:14px">Edit the message for each channel</a>
+          </div>
+        <% } %>
+
+        <% if (step === 7) { %>
+          <label class="switch"><span class="lbl"><b>Send one reminder</b><span>Only to customers who have not opened the first message</span></span><input type="checkbox" role="switch" class="sr-only" name="follow" value="1"<%= business.followup_enabled ? ' checked' : '' %>><span class="track"></span></label>
+          <label class="field" style="max-width:260px">Wait before reminding<select name="wait"><% [3,5,7].forEach(d => { %><option value="<%= d %>"<%= business.followup_wait_days === d ? ' selected' : '' %>><%= d %> days</option><% }) %></select></label>
+          <div class="preview-msg"><%- followMsg.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])).replace(/\{(first_name|business_name|service)\}/g, '<span class="tok">{$1}</span>') %></div>
+        <% } %>
+
+        <% if (step === 8) { %>
+          <dl class="summary">
+            <div><dt>Connected app</dt><dd><%= xero ? 'Xero' : ({ webhook: 'Zapier / Make webhook', csv: 'CSV uploads', manual: 'Manual sending' })[business.trigger_source] || 'None yet' %></dd></div>
+            <div><dt>Trigger</dt><dd><%= business.trigger_type === 'complete' ? 'Job is marked complete' : 'Invoice is marked paid' %></dd></div>
+            <div><dt>First message</dt><dd><%= delayText %> later</dd></div>
+            <div><dt>Channels</dt><dd><%= channelText %></dd></div>
+            <div><dt>Reminder</dt><dd><%= business.followup_enabled ? 'Once, after ' + business.followup_wait_days + ' days' : 'Off' %></dd></div>
+            <div><dt>Customers</dt><dd><%= customers.n ? customers.n + (xero ? ' from Xero' : ' in NorthStar') : 'None yet' %></dd></div>
+          </dl>
+          <% if (!business.google_review_url) { %><div class="banner paused"><span class="txt"><strong>Add your Google review link first.</strong> Without it, customers have nowhere to leave a review. <a href="/onboarding?step=1">Go to step 1</a></span></div><% } %>
+          <% if (business.automation_running) { %>
+            <div class="banner success" role="status"><span class="txt"><strong>You are live.</strong> The next finished job will start your first review request.</span><a class="btn sm" href="/dashboard">Go to dashboard</a></div>
+          <% } else { %>
+            <button class="btn gold lg" type="submit" style="align-self:flex-start"><%- h.starMark(20, '#0B1530', null) %>Turn on automation</button>
+          <% } %>
+        <% } %>
+
+        <div class="ob-actions">
+          <% if (step > 1) { %><a class="btn secondary" href="/onboarding?step=<%= step - 1 %>">Back</a><% } else { %><span></span><% } %>
+          <% if (step < 8) { %><button class="btn" type="submit">Continue</button><% } %>
+        </div>
+      </form>
+    </section>
+  </div>
+</div>
+</body>
+</html>

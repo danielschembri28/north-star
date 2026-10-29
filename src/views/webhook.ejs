@@ -1,0 +1,39 @@
+<%- include('partials/shell-top', { narrow: true }) %>
+<header class="page-head"><div class="titles"><a href="/integrations" class="small">← Integrations</a>
+  <h1 class="title"><%= app ? 'Connect ' + app.name : 'Connect any app by webhook' %></h1>
+  <p class="lede"><%= app ? app.name + ' connects through Zapier or Make. When a job finishes there, it sends the customer to NorthStar and the review request starts.' : 'Point Zapier, Make, n8n or your own system at this address. Each call is one finished job.' %></p></div></header>
+
+<section class="card">
+  <h2 class="h2">Your webhook address</h2>
+  <div class="copy-row"><div class="code" data-copy-src><%= url %></div><button class="btn secondary sm" type="button" data-copy>Copy</button></div>
+  <p class="small muted">Keep this private: anyone with it can add jobs to your account.</p>
+  <% if (isOwner) { %><form method="post" action="/integrations/webhook/rotate" class="inline-form"><%- include('partials/csrf') %><button class="linkish" type="submit" data-confirm="Create a new address? The current one will stop working.">Create a new address</button></form><% } %>
+</section>
+
+<section class="card">
+  <h2 class="h2">Set it up in Zapier</h2>
+  <ol class="rules">
+    <li>Create a Zap. For the trigger, choose <strong><%= app ? app.name : 'your app' %></strong> and the event that means the job is done<%= app ? ' (' + app.detail.replace('Send requests when ', '').replace(/^an? /, '') + ')' : '' %>.</li>
+    <li>For the action, choose <strong>Webhooks by Zapier → POST</strong>.</li>
+    <li>Paste the address above as the URL and set Payload type to <strong>JSON</strong>.</li>
+    <li>Map the fields below from your trigger, then test the step. The customer appears in NorthStar straight away.</li>
+  </ol>
+  <div class="code">{
+  "name": "Maria Borg",            <span class="muted">required</span>
+  "phone": "+356 7912 4410",        <span class="muted">phone or email required</span>
+  "email": "maria@example.com",
+  "service": "Boiler repair",       <span class="muted">optional, fills {service}</span>
+  "reference": "INV-1042",          <span class="muted">optional</span>
+  "job_id": "abc-123",              <span class="muted">optional, stops duplicates</span>
+  "completed_at": "2026-10-29T10:00:00Z"  <span class="muted">optional</span>
+}</div>
+  <p class="small muted">The reply says whether a request was scheduled, held (automation paused) or skipped (for example, the customer opted out or was asked recently).</p>
+</section>
+
+<section class="card">
+  <h2 class="h2">Test it from a terminal</h2>
+  <div class="code">curl -X POST '<%= url %>' \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Test Customer","email":"<%= user.email %>","service":"test job"}'</div>
+</section>
+<%- include('partials/shell-bottom') %>

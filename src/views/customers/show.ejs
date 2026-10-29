@@ -1,0 +1,59 @@
+<%- include('../partials/shell-top') %>
+<header class="page-head">
+  <div class="titles">
+    <a href="/customers" class="small">← Customers</a>
+    <div class="row"><span class="av" aria-hidden="true"><%= h.initials(c.name) %></span><h1 class="title"><%= c.name %></h1><% if (c.opted_out) { %><span class="badge b-red">Opted out</span><% } %></div>
+    <p class="lede">Added <%= h.date(c.created_at, true) %> · <%= SOURCE_LABEL[c.source] || c.source %><% if (c.last_requested_at) { %> · last asked <%= h.date(c.last_requested_at, true) %><% } %></p>
+  </div>
+  <% if (canEdit && !c.opted_out) { %>
+  <div class="row">
+    <% if (pending) { %>
+      <form method="post" action="/customers/<%= c.id %>/cancel" class="inline-form"><%- include('../partials/csrf') %><button class="btn secondary" type="submit">Cancel waiting request</button></form>
+    <% } else { %>
+      <form method="post" action="/customers/<%= c.id %>/send" class="row" style="gap:8px"><%- include('../partials/csrf') %>
+        <label class="sr-only" for="svc">Service (optional)</label><input id="svc" class="input" style="width:220px" name="service" placeholder="Service (optional)">
+        <button class="btn" type="submit"<% if (requests.some(x => x.sent_at)) { %> data-confirm="<%= c.name %> has been asked before. Send another request?"<% } %>><%- h.icon('send', 18, '#F2B630', 2) %>Send request now</button>
+      </form>
+    <% } %>
+  </div>
+  <% } %>
+</header>
+<% if (pending) { %><div class="banner info" role="status"><span class="txt"><strong>A request is waiting.</strong> <%= pending.status === 'held' ? 'It will go out when automation is resumed.' : 'It goes out ' + h.dateTime(pending.send_at) + '.' %></span></div><% } %>
+
+<div class="cols">
+  <section class="card c1">
+    <h2 class="h2">Details</h2>
+    <form method="post" action="/customers/<%= c.id %>" class="stack"><%- include('../partials/csrf') %>
+      <label class="field">Name<input name="name" value="<%= c.name %>"<%= canEdit ? '' : ' readonly' %>></label>
+      <label class="field">Mobile<input name="phone" type="tel" value="<%= c.phone %>"<%= canEdit ? '' : ' readonly' %>></label>
+      <label class="field">Email<input name="email" type="email" value="<%= c.email %>"<%= canEdit ? '' : ' readonly' %>></label>
+      <% if (canEdit) { %><button class="btn secondary" type="submit">Save details</button><% } %>
+    </form>
+    <% if (canEdit) { %>
+    <div class="row" style="padding-top:8px;border-top:1px solid #EEF1F7">
+      <% if (!c.opted_out) { %><form method="post" action="/customers/<%= c.id %>/optout" class="inline-form"><%- include('../partials/csrf') %><button class="btn danger sm" type="submit" data-confirm="Opt <%= c.name %> out? They will never be messaged again.">Opt out</button></form><% } %>
+      <form method="post" action="/customers/<%= c.id %>/delete" class="inline-form"><%- include('../partials/csrf') %><button class="btn ghost sm" type="submit" data-confirm="Delete <%= c.name %> and all their history? This cannot be undone.">Delete customer</button></form>
+    </div>
+    <% } %>
+    <% if (c.opted_out) { %><p class="small muted">Opted out <%= h.date(c.opted_out_at, true) %> · <%= c.opt_out_reason %></p><% } %>
+  </section>
+
+  <section class="card c2">
+    <h2 class="h2">History</h2>
+    <% if (!events.length) { %><p class="muted">Nothing has happened yet.</p><% } %>
+    <ol class="timeline" style="border:0">
+    <% events.forEach(e => { const st = ({sent:'Sent',delivered:'Delivered',clicked:'Clicked',reviewed:'Reviewed',failed:'Failed',opted_out:'Opted out',held:'Waiting',skipped:'Skipped',imported:'Imported'})[e.type] || 'Note'; %>
+      <li style="padding-left:0;padding-right:0"><span class="time"><%= h.date(e.created_at) %></span><span class="dot" aria-hidden="true" style="background: <%= h.dot(st) %>"></span><div class="what"><b><%= e.text %></b><span><%= [e.meta, h.time(e.created_at)].filter(Boolean).join(' · ') %></span></div></li>
+    <% }) %>
+    </ol>
+    <% if (reviews.length) { %>
+    <h2 class="h2" style="margin-top:8px">Reviews</h2>
+    <% reviews.forEach(rv => { %><div class="review-card" style="padding:16px"><div class="top"><span class="stars"><%= h.stars(rv.rating) %></span><span class="tag"><%= h.platform(rv.platform) %></span><span class="date"><%= h.date(rv.reviewed_at, true) %></span></div><% if (rv.text) { %><p class="text"><%= rv.text %></p><% } %></div><% }) %>
+    <% } %>
+    <% if (jobs.length) { %>
+    <h2 class="h2" style="margin-top:8px">Jobs</h2>
+    <ul class="rules"><% jobs.forEach(j => { %><li><%= [j.service || 'Job', j.reference].filter(Boolean).join(' · ') %> — <%= h.date(j.completed_at, true) %></li><% }) %></ul>
+    <% } %>
+  </section>
+</div>
+<%- include('../partials/shell-bottom') %>

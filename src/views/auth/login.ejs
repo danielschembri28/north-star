@@ -1,0 +1,19 @@
+<%- include("../partials/head") %>
+<body>
+<div class="auth">
+<div class="auth-card">
+<a class="brand" href="/"><%- h.starMark(30, "#F2B630", "#FFFFFF") %><span>NorthStar</span></a>
+<h1>Sign in</h1>
+<% if (error) { %><div class="banner error" role="alert"><span class="txt"><%= error %></span></div><% } %>
+<% flash.forEach(f => { %><div class="banner <%= f.type === 'error' ? 'error' : 'success' %>"><span class="txt"><%= f.message %></span></div><% }) %>
+<form method="post" action="/login" class="stack">
+<input type="hidden" name="next" value="<%= next %>">
+<label class="field">Email<input name="email" type="email" autocomplete="email" required value="<%= email %>"></label>
+<label class="field">Password<input name="password" type="password" autocomplete="current-password" required></label>
+<button class="btn lg" type="submit">Sign in</button>
+</form>
+<div class="spread small"><a href="/forgot">Forgot your password?</a><% if (signupsOpen) { %><a href="/signup">Create an account</a><% } %></div>
+</div>
+</div>
+</body>
+</html>

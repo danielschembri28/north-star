@@ -1,0 +1,22 @@
+<%- include('../partials/shell-top') %>
+<header class="page-head"><div class="titles"><a href="/customers/import" class="small">← Choose a different file</a><h1 class="title">Match your columns</h1><p class="lede"><%= h.plural(imp.rows.length, 'row') %> found. Check which column holds what, then import.</p></div></header>
+<form method="post" action="/customers/import/<%= imp.id %>" class="stack"><%- include('../partials/csrf') %>
+<% if (query.from === 'onboarding') { %><input type="hidden" name="return_to" value="onboarding"><% } %>
+<section class="card">
+  <div class="form-grid">
+  <% [['name','Full name'],['first','First name'],['last','Last name'],['phone','Mobile number'],['email','Email'],['service','Service or job'],['reference','Invoice number'],['date','Job date']].forEach(([k, label]) => { %>
+    <label class="field"><%= label %>
+      <select name="<%= k %>"><option value="">Not in this file</option><% imp.headers.forEach((hd, i) => { %><option value="<%= i %>"<%= guess[k] === i ? ' selected' : '' %>><%= hd || 'Column ' + (i + 1) %></option><% }) %></select>
+    </label>
+  <% }) %>
+  </div>
+  <p class="small muted">Use either Full name, or First and Last name. Rows without a name, or without both phone and email, are skipped.</p>
+</section>
+<div class="table-wrap"><table class="table" style="min-width:600px"><thead><tr><% imp.headers.forEach(hd => { %><th scope="col"><%= hd %></th><% }) %></tr></thead>
+<tbody><% preview.forEach(row => { %><tr><% imp.headers.forEach((_, i) => { %><td><%= row[i] %></td><% }) %></tr><% }) %></tbody></table></div>
+<section class="card tight">
+  <label class="check"><input type="checkbox" name="send" value="1"> Also send these customers a review request now <span class="muted" style="font-weight:500">— only do this for recent jobs. Quiet hours, daily limits and opt-outs still apply.</span></label>
+</section>
+<div class="row"><button class="btn lg" type="submit">Import <%= h.plural(imp.rows.length, 'customer') %></button><a class="btn secondary" href="/customers">Cancel</a></div>
+</form>
+<%- include('../partials/shell-bottom') %>

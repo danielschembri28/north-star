@@ -1,0 +1,9 @@
+<% const allFlash = [...(flash || []), ...(locals.notices || [])]; if (allFlash.length) { %>
+<div class="flash-stack">
+<% allFlash.forEach(f => { %>
+<div class="banner <%= f.type === 'error' ? 'error' : f.type === 'info' ? 'info' : 'success' %>" role="<%= f.type === 'error' ? 'alert' : 'status' %>">
+<span class="txt"><%= f.message %></span>
+</div>
+<% }) %>
+</div>
+<% } %>

@@ -1,0 +1,15 @@
+<%- include("../partials/head") %>
+<body>
+<div class="auth">
+<div class="auth-card">
+<a class="brand" href="/"><%- h.starMark(30, "#F2B630", "#FFFFFF") %><span>NorthStar</span></a>
+<h1>Choose a new password</h1>
+<% if (error) { %><div class="banner error" role="alert"><span class="txt"><%= error %></span></div><% } %>
+<form method="post" action="/reset/<%= token %>" class="stack">
+<label class="field">New password <span class="hint">At least 10 characters</span><input name="password" type="password" autocomplete="new-password" minlength="10" required></label>
+<button class="btn lg" type="submit">Save and sign in</button>
+</form>
+</div>
+</div>
+</body>
+</html>

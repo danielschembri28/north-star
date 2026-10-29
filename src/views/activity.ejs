@@ -1,0 +1,60 @@
+<%- include('partials/shell-top') %>
+<header class="page-head">
+  <div class="titles">
+    <h1 class="title">Activity</h1>
+    <p class="lede">Every request NorthStar has sent, and what happened next.</p>
+  </div>
+  <a class="btn secondary" href="<%= h.qs('/activity.csv', { channel: ch, status: st === 'Any status' ? '' : st }) %>"><%- h.icon('download', 18) %>Export CSV</a>
+</header>
+
+<form class="spread" method="get" action="/activity">
+  <div class="chips" role="group" aria-label="Channel">
+    <% [['All','All'],['whatsapp','WhatsApp'],['sms','SMS'],['email','Email']].forEach(([id, label]) => { %>
+      <a class="chip" aria-pressed="<%= ch === id %>" href="<%= h.qs('/activity', { channel: id, status: st === 'Any status' ? '' : st }) %>"><%= label %></a>
+    <% }) %>
+  </div>
+  <% if (ch !== 'All') { %><input type="hidden" name="channel" value="<%= ch %>"><% } %>
+  <label class="inline-select">Status
+    <select name="status" data-autosubmit><% statuses.forEach(s => { %><option<%= st === s ? ' selected' : '' %>><%= s %></option><% }) %></select></label>
+  <noscript><button class="btn secondary sm" type="submit">Filter</button></noscript>
+</form>
+
+<% if (upcoming.length && ch === 'All' && st === 'Any status') { %>
+<section class="day">
+  <h2>Coming up</h2>
+  <ol class="timeline">
+  <% upcoming.forEach(u => { %>
+    <li><span class="time"><%= u.status === 'held' ? '—' : h.time(u.send_at) %></span><span class="dot" aria-hidden="true" style="background:#8A93A6"></span>
+      <div class="what"><b><%= u.step === 'follow' ? 'Reminder' : 'Review request' %> to <a href="/customers/<%= u.customer_id %>"><%= u.name %></a></b><span><%= u.status === 'held' ? 'Waiting for automation to resume' : h.dateTime(u.send_at) %><%= u.channel ? ' · ' + h.channel(u.channel) : '' %></span></div>
+      <span class="badge <%= u.status === 'held' ? 'b-amber' : 'b-gray' %>"><%= u.status === 'held' ? 'Waiting' : 'Scheduled' %></span></li>
+  <% }) %>
+  </ol>
+</section>
+<% } %>
+
+<% if (!days.length) { %>
+<div class="empty">
+  <div class="ic"><%- h.icon('activity', 30) %></div>
+  <h2>Nothing here yet</h2>
+  <p><%= ch === 'All' && st === 'Any status' ? 'When requests go out, every send, click, review and opt-out shows up here.' : 'No activity matches these filters.' %></p>
+</div>
+<% } %>
+
+<% days.forEach(d => { %>
+<section class="day">
+  <h2><%= d.label %></h2>
+  <ol class="timeline">
+  <% d.events.forEach(e => { %>
+    <li>
+      <span class="time"><%= h.time(e.created_at) %></span>
+      <span class="dot" aria-hidden="true" style="background: <%= h.dot(e.status) %>"></span>
+      <div class="what"><b><% if (e.customer_id) { %><a href="/customers/<%= e.customer_id %>" style="color:inherit;text-decoration:none"><%= e.text %></a><% } else { %><%= e.text %><% } %></b><% if (e.meta) { %><span><%= e.meta %></span><% } %></div>
+      <span class="badge <%= h.badge(e.status === 'Connected' ? 'Reviewed' : e.status === 'Problem' ? 'Failed' : e.status === 'Imported' || e.status === 'Note' ? 'Skipped' : e.status) %>"><%= e.status %></span>
+    </li>
+  <% }) %>
+  </ol>
+</section>
+<% }) %>
+
+<% if (more) { %><a class="btn secondary" style="align-self:center" href="<%= h.qs('/activity', { channel: ch, status: st === 'Any status' ? '' : st, before: nextBefore }) %>">Load earlier activity</a><% } %>
+<%- include('partials/shell-bottom') %>

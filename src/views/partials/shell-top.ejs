@@ -1,0 +1,43 @@
+<%- include('head') %>
+<body>
+<a class="sr-only" href="#main">Skip to content</a>
+<div class="app">
+<header class="topbar">
+  <a class="brand" href="/dashboard"><%- h.starMark(26) %><span>NorthStar</span></a>
+  <span class="tb-biz"><%= business.name %></span>
+  <a class="icon-btn-dark" href="/menu" aria-label="Menu"><%- h.icon('menu', 22) %></a>
+</header>
+<aside class="sidebar">
+<nav class="nav" aria-label="Main">
+  <a class="brand" href="/dashboard"><%- h.starMark(30) %><span>NorthStar</span></a>
+  <a class="biz-card" href="/businesses" title="Switch or add a business">
+    <span class="biz-logo"><% if (business.logo_file_id) { %><img src="/files/<%= business.logo_file_id %>" alt=""><% } else { %><%= h.initials(business.name) %><% } %></span>
+    <span style="min-width:0"><span class="name"><%= business.name %></span><span class="plan"><%= business.plan === 'trial' ? 'Free trial' : business.plan.charAt(0).toUpperCase() + business.plan.slice(1) + ' plan' %></span></span>
+  </a>
+  <div class="nav-links">
+  <% [['home','/dashboard','Dashboard'],['customers','/customers','Customers'],['automation','/automation','Automation'],['messages','/messages','Messages'],['activity','/activity','Activity'],['reviews','/reviews','Reviews'],['integrations','/integrations','Integrations'],['settings','/settings','Settings']].forEach(([key, href, label]) => { %>
+    <a class="nav-link" href="<%= href %>"<% if (locals.active === key) { %> aria-current="page"<% } %>><%- h.icon(key) %><%= label %></a>
+  <% }) %>
+  </div>
+  <div class="nav-foot">
+    <% if (locals.progress && progress.done < progress.total) { %>
+    <a class="setup-card" href="<%= progress.done < 5 && !business.onboarding_done ? '/onboarding' : progress.next.href %>">
+      <b>Setup <%= progress.done %> of <%= progress.total %> done</b>
+      <span class="track-dark"><span style="width: <%= progress.pct %>%"></span></span>
+      <small><%= progress.next.label %></small>
+    </a>
+    <% } %>
+    <div class="me">
+      <span class="av"><%= h.initials(user.name) %></span>
+      <span class="who"><b><%= user.name %></b><small><%= roleLabel %></small></span>
+      <form method="post" action="/logout"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="icon-btn-dark" type="submit" aria-label="Sign out" title="Sign out"><%- h.icon('logout', 18) %></button></form>
+    </div>
+  </div>
+</nav>
+</aside>
+<main class="main" id="main">
+<div class="wrap<%= locals.narrow ? ' narrow' : '' %>">
+<% if (messageMode === 'console' && !locals.hideModeNotice) { %>
+<div class="banner info" role="status"><span class="txt"><strong>Test mode.</strong> Messages are logged on the server instead of being sent. Set <code>MESSAGE_MODE=live</code> and add your Twilio and email keys to send for real.</span></div>
+<% } %>
+<%- include('flash') %>

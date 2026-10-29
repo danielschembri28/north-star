@@ -1,0 +1,10 @@
+<%- include('../partials/shell-top', { narrow: true }) %>
+<header class="page-head"><div class="titles"><a href="/customers" class="small">← Customers</a><h1 class="title">Import customers</h1><p class="lede">Upload a CSV with name, phone and email columns. We match them for you on the next screen.</p></div></header>
+<% if (error) { %><div class="banner error" role="alert"><span class="txt"><%= error %></span></div><% } %>
+<form class="card" method="post" action="/customers/import?_csrf=<%= encodeURIComponent(csrf) %>" enctype="multipart/form-data">
+  <label class="field">CSV file<input type="file" name="file" accept=".csv,text/csv" required></label>
+  <p class="small muted">Exported from Excel, Google Sheets, Fresha, Square or your accounting app? That works. Up to 20,000 rows, 5 MB.</p>
+  <div class="row"><button class="btn" type="submit"><%- h.icon('upload', 18) %>Upload and continue</button><a href="/customers/import-template.csv">Download a template</a></div>
+</form>
+<div class="banner info"><span class="txt">Past customers are imported but will not be messaged unless you choose to on the next screen. Only new jobs trigger requests.</span></div>
+<%- include('../partials/shell-bottom') %>

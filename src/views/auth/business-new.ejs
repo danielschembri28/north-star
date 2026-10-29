@@ -1,0 +1,16 @@
+<%- include("../partials/head") %>
+<body>
+<div class="auth">
+<div class="auth-card">
+<a class="brand" href="/"><%- h.starMark(30, "#F2B630", "#FFFFFF") %><span>NorthStar</span></a>
+<div class="stack" style="gap:6px"><h1>Add a business</h1><p class="muted">Each business has its own customers, messages and reviews. You can switch between them any time.</p></div>
+<% if (error) { %><div class="banner error" role="alert"><span class="txt"><%= error %></span></div><% } %>
+<form method="post" action="/businesses" class="stack"><%- include('../partials/csrf') %>
+<label class="field">Business name<input name="name" required autocomplete="organization"></label>
+<button class="btn lg" type="submit">Create and set up</button>
+</form>
+<% if (business) { %><a class="small" href="/dashboard">Cancel</a><% } %>
+</div>
+</div>
+</body>
+</html>

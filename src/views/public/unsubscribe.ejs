@@ -1,0 +1,17 @@
+<%- include('../partials/head') %>
+<body>
+<main class="public">
+<div class="public-card">
+<div class="logo-box"><%= h.initials(business.name) %></div>
+<% if (done) { %>
+<h1>You are unsubscribed</h1>
+<p class="muted"><%= business.name %> will not send you any more review requests.</p>
+<% } else { %>
+<h1>Stop review requests from <%= business.name %>?</h1>
+<p class="muted">You will not be asked for a review again, even after future visits.</p>
+<form method="post" action="/u/<%= code %>" style="width:100%"><button class="btn" type="submit">Unsubscribe</button></form>
+<% } %>
+</div>
+</main>
+</body>
+</html>

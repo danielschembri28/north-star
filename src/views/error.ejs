@@ -1,0 +1,12 @@
+<%- include('partials/head') %>
+<body>
+<div class="public">
+<div class="public-card">
+<%- h.starMark(48) %>
+<h1><%= title %></h1>
+<p class="muted"><%= message %></p>
+<a class="btn" href="<%= locals.user ? '/dashboard' : '/' %>"><%= locals.user ? 'Back to dashboard' : 'Go to home page' %></a>
+</div>
+</div>
+</body>
+</html>

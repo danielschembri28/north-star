@@ -1,0 +1,133 @@
+<%- include('partials/shell-top') %>
+<header class="page-head"><div class="titles"><h1 class="title">Settings</h1><p class="lede">Each section saves on its own.</p></div></header>
+<% if (billingNote === 'success') { %><div class="banner success"><span class="txt">Thanks! Your subscription is active. It can take a few seconds to show below.</span></div><% } %>
+
+<div class="settings">
+  <nav class="settings-nav" aria-label="Settings sections">
+    <a href="#profile">Business profile</a><a href="#links">Review links</a><a href="#team">Team members</a><a href="#sending">Sending rules</a><a href="#optout">Opt-outs</a><a href="#billing">Billing</a><a href="#account">Your account</a>
+  </nav>
+  <div class="settings-body">
+    <section class="card" id="profile">
+      <div class="sec-head"><div><h2>Business profile</h2><p>Shown to customers in every message.</p></div></div>
+      <form method="post" action="/settings/profile?_csrf=<%= encodeURIComponent(csrf) %>" enctype="multipart/form-data" class="stack">
+        <div class="row">
+          <div class="logo-box"><% if (business.logo_file_id) { %><img src="/files/<%= business.logo_file_id %>" alt="Current logo"><% } else { %><%= h.initials(business.name) %><% } %></div>
+          <label class="field" style="flex:1 1 240px">Logo <span class="hint">PNG or JPG, square works best, up to 2 MB</span><input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif"<%= canEdit ? '' : ' disabled' %>></label>
+          <% if (business.logo_file_id && canEdit) { %><label class="check"><input type="checkbox" name="remove_logo" value="1"> Remove logo</label><% } %>
+        </div>
+        <div class="form-grid">
+          <label class="field">Business name<input name="name" value="<%= business.name %>" required<%= canEdit ? '' : ' readonly' %>></label>
+          <label class="field">Phone<input type="tel" name="phone" value="<%= business.phone %>"<%= canEdit ? '' : ' readonly' %>></label>
+        </div>
+        <% if (canEdit) { %><button class="btn" type="submit" style="align-self:flex-start">Save profile</button><% } %>
+      </form>
+    </section>
+
+    <section class="card" id="links">
+      <div class="sec-head"><div><h2>Review links</h2><p>Where customers land when they tap the link. With both, they choose; with one, they go straight there.</p></div></div>
+      <form method="post" action="/settings/links" class="stack"><%- include('partials/csrf') %>
+        <label class="field">Google review link <span class="hint">From your Google Business Profile: Ask for reviews → copy the link</span><input type="url" name="google_review_url" value="<%= business.google_review_url %>" placeholder="https://g.page/r/…/review"<%= canEdit ? '' : ' readonly' %>></label>
+        <label class="field">Facebook review link <span class="opt">Optional</span><input type="url" name="facebook_review_url" value="<%= business.facebook_review_url %>" placeholder="https://facebook.com/yourpage/reviews"<%= canEdit ? '' : ' readonly' %>></label>
+        <% if (canEdit) { %><button class="btn" type="submit" style="align-self:flex-start">Save links</button><% } %>
+      </form>
+    </section>
+
+    <section class="card" id="team">
+      <div class="sec-head"><div><h2>Team members</h2><p>Owners manage everything. Managers run day to day. View only can look but not change.</p></div></div>
+      <% team.forEach(m => { %>
+      <div class="line-item">
+        <span class="av md" aria-hidden="true"><%= h.initials(m.name) %></span>
+        <span class="info"><strong><%= m.name %><%= m.id === user.id ? ' (you)' : '' %></strong><span><%= m.email %></span></span>
+        <% if (isOwner && m.id !== user.id) { %>
+          <form method="post" action="/settings/team/<%= m.id %>/role" class="row" style="gap:8px"><%- include('partials/csrf') %>
+            <label class="sr-only" for="role-<%= m.id %>">Role for <%= m.name %></label>
+            <select id="role-<%= m.id %>" name="role" class="input" style="width:auto;min-height:40px" data-autosubmit><% ['owner','manager','viewer'].forEach(rl => { %><option value="<%= rl %>"<%= m.role === rl ? ' selected' : '' %>><%= ROLE_LABEL[rl] %></option><% }) %></select>
+          </form>
+          <form method="post" action="/settings/team/<%= m.id %>/remove" class="inline-form"><%- include('partials/csrf') %><button class="btn ghost sm" type="submit" data-confirm="Remove <%= m.name %> from the team?">Remove</button></form>
+        <% } else { %>
+          <span class="badge b-gray"><%= ROLE_LABEL[m.role] %></span>
+        <% } %>
+      </div>
+      <% }) %>
+      <% invites.forEach(i => { %>
+      <div class="line-item"><span class="av md" aria-hidden="true" style="background:#F4F5F9;color:#4A5568">?</span><span class="info"><strong><%= i.email %></strong><span>Invited as <%= ROLE_LABEL[i.role] %> · <%= h.ago(i.created_at).toLowerCase() %></span></span>
+        <% if (isOwner) { %><form method="post" action="/settings/invites/<%= i.id %>/cancel" class="inline-form"><%- include('partials/csrf') %><button class="btn ghost sm" type="submit">Cancel invite</button></form><% } %></div>
+      <% }) %>
+      <% if (isOwner) { %>
+      <form method="post" action="/settings/team/invite" class="row" style="align-items:flex-end"><%- include('partials/csrf') %>
+        <label class="field" style="flex:1 1 240px">Invite by email<input type="email" name="email" required placeholder="name@business.com"></label>
+        <label class="field">Role<select name="role"><option value="manager">Manager</option><option value="viewer">View only</option><option value="owner">Owner</option></select></label>
+        <button class="btn" type="submit"><%- h.icon('addUser', 18) %>Invite someone</button>
+      </form>
+      <% } %>
+    </section>
+
+    <section class="card" id="sending">
+      <div class="sec-head"><div><h2>Sending limits and quiet hours</h2><p>Keep requests polite and well timed.</p></div></div>
+      <form method="post" action="/settings/sending" class="stack"><%- include('partials/csrf') %>
+        <div class="form-grid">
+          <label class="field">Most requests per day<input type="number" name="daily_limit" min="1" max="5000" value="<%= business.daily_limit %>"<%= canEdit ? '' : ' readonly' %>></label>
+          <label class="field">Quiet from<input type="time" name="quiet_start" value="<%= business.quiet_start %>"<%= canEdit ? '' : ' readonly' %>></label>
+          <label class="field">Quiet until<input type="time" name="quiet_end" value="<%= business.quiet_end %>"<%= canEdit ? '' : ' readonly' %>></label>
+          <label class="field">Time zone<select name="timezone"<%= canEdit ? '' : ' disabled' %>><% TIMEZONES.forEach(tz => { %><option<%= business.timezone === tz ? ' selected' : '' %>><%= tz %></option><% }) %></select></label>
+        </div>
+        <label class="switch"><span class="lbl"><b>No messages on Sundays</b><span>Requests due on a Sunday wait until Monday morning</span></span><input type="checkbox" role="switch" class="sr-only" name="skip_sundays" value="1"<%= business.skip_sundays ? ' checked' : '' %><%= canEdit ? '' : ' disabled' %>><span class="track"></span></label>
+        <label class="switch"><span class="lbl"><b>Ask each customer once every <%= business.repeat_guard_days || 90 %> days</b><span>Regular customers are not asked after every visit</span></span><input type="checkbox" role="switch" class="sr-only" name="repeat_guard" value="1"<%= business.repeat_guard_days > 0 ? ' checked' : '' %><%= canEdit ? '' : ' disabled' %>><span class="track"></span></label>
+        <input type="hidden" name="repeat_guard_days" value="<%= business.repeat_guard_days || 90 %>">
+        <% if (canEdit) { %><button class="btn" type="submit" style="align-self:flex-start">Save sending rules</button><% } %>
+      </form>
+    </section>
+
+    <section class="card" id="optout">
+      <div class="sec-head"><div><h2>Opt-out handling</h2><p>Required by law, handled for you.</p></div></div>
+      <ul class="rules">
+        <li>Replying STOP to a text or WhatsApp opts a customer out instantly</li>
+        <li>Every email includes a one-click unsubscribe link</li>
+        <li>Opted-out customers are never messaged again, even after a new job</li>
+      </ul>
+      <div class="line-item"><span class="info"><span style="color:#101828;font-size:14px"><strong><%= h.plural(optouts, 'customer') %></strong> <%= optouts === 1 ? 'has' : 'have' %> opted out</span></span><a href="/customers?status=Opted%20out" style="font-weight:700;font-size:14px">View list</a></div>
+    </section>
+
+    <section class="card" id="billing">
+      <div class="sec-head">
+        <div><h2>Billing</h2><p><%= business.plan === 'trial' ? 'Free trial' : plan.planName + ' plan' %><%= plan.planPriceLabel && business.plan !== 'trial' ? ' · ' + plan.planPriceLabel + ' per month' : '' %><%= business.plan_renews_at ? ' · renews ' + h.date(business.plan_renews_at) : '' %><%= business.plan_status && business.plan_status !== 'active' && business.plan_status !== 'trialing' ? ' · ' + business.plan_status.replace('_', ' ') : '' %></p></div>
+        <% if (isOwner && stripeReady) { %>
+          <% if (business.stripe_subscription_id) { %>
+            <form method="post" action="/billing/portal" class="inline-form"><%- include('partials/csrf') %><button class="btn secondary" type="submit">Manage plan and invoices</button></form>
+          <% } else { %>
+            <form method="post" action="/billing/checkout" class="inline-form"><%- include('partials/csrf') %><button class="btn gold" type="submit">Upgrade to <%= plan.planName %></button></form>
+          <% } %>
+        <% } %>
+      </div>
+      <div class="stack" style="gap:8px">
+        <div class="spread small" style="font-weight:700"><span>Messages this month</span><span class="tabular"><%= usage %> of <%= business.monthly_message_limit %></span></div>
+        <div class="bar"><span style="width: <%= Math.min(100, Math.round(usage / Math.max(1, business.monthly_message_limit) * 100)) %>%; background: <%= usage >= business.monthly_message_limit ? '#B42318' : '#1F3A8A' %>"></span></div>
+        <% if (usage >= business.monthly_message_limit) { %><p class="error-text">You have used this month’s allowance. New requests wait until next month or until you upgrade.</p><% } %>
+      </div>
+      <% if (!stripeReady) { %><p class="small muted">Online billing is not switched on for this server.</p><% } %>
+    </section>
+
+    <section class="card" id="account">
+      <div class="sec-head"><div><h2>Your account</h2><p><%= user.email %></p></div></div>
+      <form method="post" action="/settings/account" class="stack"><%- include('partials/csrf') %>
+        <div class="form-grid">
+          <label class="field">Your name<input name="name" value="<%= user.name %>" autocomplete="name"></label>
+          <label class="field">Current password <span class="opt">To change it</span><input type="password" name="current_password" autocomplete="current-password"></label>
+          <label class="field">New password<input type="password" name="new_password" minlength="10" autocomplete="new-password"></label>
+        </div>
+        <button class="btn secondary" type="submit" style="align-self:flex-start">Update account</button>
+      </form>
+    </section>
+
+    <% if (isOwner) { %>
+    <section class="card" id="danger" style="border-color:#F5C2BC">
+      <div class="sec-head"><div><h2>Delete this business</h2><p>Removes every customer, message, review and setting for <%= business.name %>. This cannot be undone.</p></div></div>
+      <form method="post" action="/settings/delete-business" class="row" style="align-items:flex-end"><%- include('partials/csrf') %>
+        <label class="field" style="flex:1 1 260px">Type <strong><%= business.name %></strong> to confirm<input name="confirm" autocomplete="off"></label>
+        <button class="btn solid-danger" type="submit">Delete business</button>
+      </form>
+    </section>
+    <% } %>
+  </div>
+</div>
+<%- include('partials/shell-bottom') %>

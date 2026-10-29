@@ -1,0 +1,88 @@
+<%- include('partials/shell-top') %>
+<header class="page-head">
+  <div class="titles">
+    <h1 class="title">Messages</h1>
+    <p class="lede">Write it once per channel. Tokens fill in each customer's details automatically.</p>
+  </div>
+  <% if (canEdit) { %>
+  <div class="row">
+    <details class="disclose" style="position:relative">
+      <summary class="btn secondary">Send me a test</summary>
+      <form method="post" action="/messages/test" class="card tight" style="position:absolute;right:0;top:52px;z-index:5;width:320px;box-shadow:0 12px 32px rgba(11,21,48,.16)"><%- include('partials/csrf') %>
+        <input type="hidden" name="channel" value="<%= channel %>"><input type="hidden" name="which" value="<%= which %>">
+        <label class="field"><%= channel === 'email' ? 'Send to email' : 'Send to mobile number' %>
+          <input name="to" <%= channel === 'email' ? 'type=email' : 'type=tel' %> value="<%= channel === 'email' ? user.email : '' %>" placeholder="<%= channel === 'email' ? '' : '+356 …' %>" required></label>
+        <p class="small muted">Uses the saved wording<%= channel === 'email' ? '' : '' %>. Save first if you changed it.</p>
+        <button class="btn" type="submit">Send test</button>
+      </form>
+    </details>
+    <button class="btn" type="submit" form="tpl-form">Save changes</button>
+  </div>
+  <% } %>
+</header>
+
+<div class="spread">
+  <div class="seg" role="tablist" aria-label="Channel">
+    <% [['whatsapp','WhatsApp'],['sms','SMS'],['email','Email']].forEach(([id, label]) => { %>
+      <a role="tab" aria-selected="<%= channel === id %>" href="/messages?channel=<%= id %>&which=<%= which %>" style="min-height:44px;padding:0 20px;font-size:14px;font-weight:800"><%= label %></a>
+    <% }) %>
+  </div>
+  <div class="seg light" role="group" aria-label="Which message">
+    <a aria-pressed="<%= which === 'first' %>" href="/messages?channel=<%= channel %>&which=first" style="min-height:40px">First request</a>
+    <a aria-pressed="<%= which === 'follow' %>" href="/messages?channel=<%= channel %>&which=follow" style="min-height:40px">Reminder</a>
+  </div>
+</div>
+
+<% if (!ready[channel]) { %>
+<div class="banner paused"><span class="txt"><strong><%= ({whatsapp:'WhatsApp',sms:'SMS',email:'Email'})[channel] %> is not set up on the server yet.</strong> Messages on this channel are skipped and the next channel is used. See the setup guide in the README.</span></div>
+<% } %>
+
+<div class="cols" style="align-items:flex-start">
+  <section class="card c2">
+    <form id="tpl-form" method="post" action="/messages" class="stack" data-template-editor data-channel="<%= channel %>" data-sample="<%= JSON.stringify(sample) %>">
+      <%- include('partials/csrf') %>
+      <input type="hidden" name="channel" value="<%= channel %>"><input type="hidden" name="which" value="<%= which %>">
+      <% if (channel === 'email') { %>
+      <label class="field">Subject line<input name="subject" data-subject value="<%= tpl.subject %>"<%= canEdit ? '' : ' readonly' %>></label>
+      <% } %>
+      <label class="field">Message<textarea name="body" rows="8" data-body<%= canEdit ? '' : ' readonly' %>><%= tpl.body %></textarea></label>
+      <div class="spread">
+        <div class="tokens"><span class="small" style="font-weight:700">Insert</span>
+          <% tokens.forEach(t => { %><button type="button" class="token" data-token="<%= t %>"<%= canEdit ? '' : ' disabled' %>><%= t %></button><% }) %>
+        </div>
+        <span class="counter <%= channel === 'sms' ? (seg.segments > 1 ? 'warn' : 'ok') : '' %>" data-counter role="status"><%= channel === 'sms' ? `${seg.len} / ${seg.single} · ${seg.segments} ${seg.segments === 1 ? 'text' : 'texts'}` : `${seg.len} characters` %></span>
+      </div>
+      <p class="small muted"><%= ({
+        whatsapp: waTemplate ? 'WhatsApp uses your approved business template (set on the server). This wording is used for the preview, the test sandbox and replies inside the 24-hour window.' : 'WhatsApp business messages need a template approved by Meta. Until yours is set on the server, this text is sent as-is, which only works in the Twilio sandbox.',
+        sms: 'Texts over 160 characters are split and cost more. The opt-out line is required and added for you if you remove it.',
+        email: 'The review button and an unsubscribe link are added under your message automatically.'
+      })[channel] %></p>
+    </form>
+    <% if (canEdit) { %>
+    <form method="post" action="/messages/reset" class="inline-form"><%- include('partials/csrf') %><input type="hidden" name="channel" value="<%= channel %>"><input type="hidden" name="which" value="<%= which %>"><button class="linkish" type="submit" data-confirm="Replace this message with the suggested wording?">Restore suggested wording</button></form>
+    <% } %>
+  </section>
+
+  <section class="card c1" aria-label="Preview">
+    <p class="eyebrow" style="color:#4A5568">Preview for Maria Borg</p>
+    <% if (channel !== 'email') { %>
+    <div class="phone"><div class="screen" style="background: <%= channel === 'whatsapp' ? '#EFE9DF' : '#F4F5F9' %>">
+      <div class="ph-head"><span class="av sm" aria-hidden="true" style="background:#0B1530;color:#F2B630"><%= h.initials(business.name) %></span><%= business.name %></div>
+      <div class="ph-body"><span class="ph-time">Today 10:00</span>
+        <div class="bubble<%= channel === 'sms' ? ' sms' : '' %>"><span data-preview><%= preview.body %></span><% if (channel === 'whatsapp') { %><span class="wa-btn">Leave a review</span><% } %></div>
+      </div>
+    </div></div>
+    <% } else { %>
+    <div class="mail">
+      <div class="mhead"><span><strong>From</strong> <%= business.name %></span><span><strong>Subject</strong> <span data-subject-preview><%= preview.subject %></span></span></div>
+      <div class="mbody">
+        <% if (business.logo_file_id) { %><img src="/files/<%= business.logo_file_id %>" alt="" width="44" height="44" style="border-radius:12px"><% } else { %><span class="av" aria-hidden="true" style="background:#0B1530;color:#F2B630;border-radius:12px"><%= h.initials(business.name) %></span><% } %>
+        <p class="msg" data-preview><%= preview.body %></p>
+        <span class="fakebtn">Leave a review</span>
+        <p class="small muted">Do not want these emails? Unsubscribe in one click.</p>
+      </div>
+    </div>
+    <% } %>
+  </section>
+</div>
+<%- include('partials/shell-bottom') %>

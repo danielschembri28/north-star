@@ -1,0 +1,24 @@
+# Render Blueprint: free web service. Use a free Neon database for DATABASE_URL
+# (Render's own free Postgres is deleted after 30 days). See README → "Run it for free".
+services:
+  - type: web
+    name: northstar
+    runtime: docker
+    plan: free
+    region: frankfurt
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSL
+        value: "true"
+      - key: APP_SECRET
+        generateValue: true
+      - key: CRON_SECRET
+        generateValue: true
+      - key: RUN_ENGINE
+        value: "false"
+      - key: MESSAGE_MODE
+        value: console
